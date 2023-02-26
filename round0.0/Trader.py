@@ -5,10 +5,9 @@ import numpy as np
 
 class Trader:
     def __init__(self):
-        self.sma_PEARLS = np.array([])
-        self.pos_limit_PEARLS = 20
-        self.sma_BANANAS = np.array([])
-        self.pos_limit_BANANAS = 20
+        self.pos_limit = {"PEARLS": 20, "BANANAS": 20}
+        self.pos = {"PEARLS": 0, "BANANAS": 0}
+        self.sma = {"PEARLS": np.array([]), "BANANAS": np.array([])}
 
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
         """
@@ -17,6 +16,17 @@ class Trader:
         """
         # Initialize the method output dict as an empty dict
         result = {}
+
+        # Update positions
+        for product, trades in state.own_trades.items():
+            pos_delta = 0
+            for trade in trades:
+                if trade.buyer == "SUBMISSION":
+                    # We bought product
+                    pos_delta += trade.quantity
+                else:
+                    pos_delta -= trade.quantity
+            self.pos[product] += pos_delta
 
         # Iterate over all the keys (the available products) contained in the order depths
         for product in state.order_depths.keys():
@@ -35,28 +45,21 @@ class Trader:
             avg = (best_bid + best_ask) / \
                 2 if best_bid is not None and best_ask is not None else None
 
-            # Position limit
-            position = state.position[product]
-
-            if product == 'PEARLS' and avg is not None:
-                self.sma_PEARLS.append(avg)
-                acceptable_price = self.sma_PEARLS.mean() if len(self.sma_PEARLS) > 1 else None
-                self.pos_limit = self.pos_limit_PEARLS
-            elif product == 'BANANAS' and avg is not None:
-                self.sma_BANANAS.append(avg)
-                acceptable_price = self.sma_BANANAS.mean() if len(self.sma_BANAS) > 1 else None
-                self.pos_limit = self.pos_limit_BANANAS
+            if avg is not None:
+                self.sma[product].append(avg)
+                acceptable_price = self.sma[product].mean() if len(
+                    self.sma[product]) != 0 else None
 
             if acceptable_price is not None and best_ask < acceptable_price:
                 buyable_volume = min(-best_ask_volume,
-                                     self.pos_limit - position)
+                                     self.pos_limit[product] - self.pos[product])
                 print("BUY", str(buyable_volume) + "x", best_ask)
                 orders.append(
                     Order(product, best_ask, buyable_volume))
 
             if acceptable_price is not None and best_bid > acceptable_price:
                 sellable_volume = max(-best_bid_volume, -
-                                      self.pos_limit-self.pos_limit)
+                                      self.pos_limit[product] - self.pos[product])
                 print("SELL", str(sellable_volume) + "x", best_bid)
                 orders.append(
                     Order(product, best_bid, sellable_volume))
