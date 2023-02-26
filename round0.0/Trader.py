@@ -7,7 +7,7 @@ class Trader:
     def __init__(self):
         self.pos_limit = {"PEARLS": 20, "BANANAS": 20}
         self.pos = {"PEARLS": 0, "BANANAS": 0}
-        self.sma = {"PEARLS": np.array([]), "BANANAS": np.array([])}
+        self.sma = {"PEARLS": [], "BANANAS": []}
 
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
         """
@@ -47,7 +47,7 @@ class Trader:
 
             if avg is not None:
                 self.sma[product].append(avg)
-                acceptable_price = self.sma[product].mean() if len(
+                acceptable_price = np.array(self.sma[product]).mean() if len(
                     self.sma[product]) != 0 else None
 
             if acceptable_price is not None and best_ask < acceptable_price:
