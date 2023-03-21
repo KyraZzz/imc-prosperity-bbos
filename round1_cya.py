@@ -10,6 +10,7 @@ class Trader:
         self.pos = {"PEARLS": 0, "BANANAS": 0}
         self.sma = {"PEARLS": [], "BANANAS": []}
         self.last_timestamp = {"PEARLS": 0, "BANANAS": 0}
+        self.banana_acceptable_price = 0
 
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
         """
@@ -38,38 +39,38 @@ class Trader:
             self.pos[product] += pos_delta
             self.last_timestamp[product] = trades[0].timestamp
 
-        # product = "PEARLS"
-        # orders: list[Order] = []
-        # order_depth: OrderDepth = state.order_depths[product]
+        product = "PEARLS"
+        orders: list[Order] = []
+        order_depth: OrderDepth = state.order_depths[product]
 
-        # buyable_volume = self.pos_limit[product] - self.pos[product]
-        # sorted_sellorders = collections.OrderedDict(sorted(order_depth.sell_orders.items()))
-        # for price,volume in sorted_sellorders.items():
-        #     print(price, volume)
-        # for price, volume in sorted_sellorders.items():
-        #     if price >= 10000 or buyable_volume == 0:
-        #         break
-        #     print("volume", volume)
-        #     buy_volume = min(buyable_volume, -volume)
-        #     print("buy_volume", buy_volume)
-        #     buyable_volume -= buy_volume
-        #     print("buyable_volume", buyable_volume)
-        #     print("BUY", product, str(buy_volume) + "x", price)
-        #     orders.append(Order(product, price, buy_volume))
+        buyable_volume = self.pos_limit[product] - self.pos[product]
+        sorted_sellorders = collections.OrderedDict(sorted(order_depth.sell_orders.items()))
+        for price,volume in sorted_sellorders.items():
+            print(price, volume)
+        for price, volume in sorted_sellorders.items():
+            if price >= 10000 or buyable_volume == 0:
+                break
+            print("volume", volume)
+            buy_volume = min(buyable_volume, -volume)
+            print("buy_volume", buy_volume)
+            buyable_volume -= buy_volume
+            print("buyable_volume", buyable_volume)
+            print("BUY", product, str(buy_volume) + "x", price)
+            orders.append(Order(product, price, buy_volume))
 
-        # sellable_volume = -self.pos_limit[product] - self.pos[product]
-        # sorted_buyorders = collections.OrderedDict(sorted(order_depth.buy_orders.items(), reverse = True))
-        # for price,volume in sorted_buyorders.items():
-        #     print(price, volume)
-        # for price, volume in sorted_buyorders.items():
-        #     if price <= 10000 or sellable_volume == 0:
-        #         break
-        #     sell_volume = max(sellable_volume, -volume)
-        #     sellable_volume -= sell_volume
-        #     print("SELL", product, str(sell_volume) + "x", price)
-        #     orders.append(Order(product, price, sell_volume))
+        sellable_volume = -self.pos_limit[product] - self.pos[product]
+        sorted_buyorders = collections.OrderedDict(sorted(order_depth.buy_orders.items(), reverse = True))
+        for price,volume in sorted_buyorders.items():
+            print(price, volume)
+        for price, volume in sorted_buyorders.items():
+            if price <= 10000 or sellable_volume == 0:
+                break
+            sell_volume = max(sellable_volume, -volume)
+            sellable_volume -= sell_volume
+            print("SELL", product, str(sell_volume) + "x", price)
+            orders.append(Order(product, price, sell_volume))
 
-        # result[product] = orders
+        result[product] = orders
 
         # Iterate over all the keys (the available products) contained in the order depths
         product = "BANANAS"
@@ -88,6 +89,12 @@ class Trader:
         avg = (best_bid + best_ask) / \
             2 if best_bid is not None and best_ask is not None else None
 
+        # if avg is not None:
+        #     if self.banana_acceptable_price == 0:
+        #         self.banana_acceptable_price = avg
+        #     else: self.banana_acceptable_price = self.banana_acceptable_price * 0.8 + avg * 0.2
+        #     acceptable_price = self.banana_acceptable_price
+        # else: acceptable_price = 4990
         if avg is not None:
             self.sma[product].append(avg)
             if len(self.sma[product]) != 0:
@@ -96,7 +103,7 @@ class Trader:
                 else:
                     acceptable_price = np.array(self.sma[product])[-7:].mean()
         else:
-            acceptable_price = 4990
+            acceptable_price = 5000
 
         if acceptable_price is not None and best_ask < acceptable_price:
             if best_ask_volume is not None:
