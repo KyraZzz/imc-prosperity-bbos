@@ -26,12 +26,13 @@ class Trader:
                 continue
             pos_delta = 0
             for trade in trades:
-                print(trade.buyer, trade.seller, trade.price, trade.quantity, trade.symbol)
+                print(trade.buyer, trade.seller, trade.price,
+                      trade.quantity, trade.symbol)
                 if trade.buyer == "SUBMISSION":
                     # We bought product
                     pos_delta += trade.quantity
                     # self.profit -= trade.price * trade.quantity
-                else:
+                elif trade.seller == "SUBMISSION":
                     pos_delta -= trade.quantity
                     # self.profit += trade.price * trade.quantity
             self.pos[product] += pos_delta
@@ -40,7 +41,7 @@ class Trader:
         # product = "PEARLS"
         # orders: list[Order] = []
         # order_depth: OrderDepth = state.order_depths[product]
-        
+
         # buyable_volume = self.pos_limit[product] - self.pos[product]
         # sorted_sellorders = collections.OrderedDict(sorted(order_depth.sell_orders.items()))
         # for price,volume in sorted_sellorders.items():
@@ -55,7 +56,7 @@ class Trader:
         #     print("buyable_volume", buyable_volume)
         #     print("BUY", product, str(buy_volume) + "x", price)
         #     orders.append(Order(product, price, buy_volume))
-        
+
         # sellable_volume = -self.pos_limit[product] - self.pos[product]
         # sorted_buyorders = collections.OrderedDict(sorted(order_depth.buy_orders.items(), reverse = True))
         # for price,volume in sorted_buyorders.items():
@@ -67,9 +68,8 @@ class Trader:
         #     sellable_volume -= sell_volume
         #     print("SELL", product, str(sell_volume) + "x", price)
         #     orders.append(Order(product, price, sell_volume))
-        
-        # result[product] = orders
 
+        # result[product] = orders
 
         # Iterate over all the keys (the available products) contained in the order depths
         product = "BANANAS"
@@ -101,10 +101,10 @@ class Trader:
         if acceptable_price is not None and best_ask < acceptable_price:
             if best_ask_volume is not None:
                 buyable_volume = min(-best_ask_volume,
-                                 self.pos_limit[product] - self.pos[product])
+                                     self.pos_limit[product] - self.pos[product])
             else:
                 buyable_volume = self.pos_limit[product] - self.pos[product]
-            
+
             if buyable_volume > 0:
                 print("BUY", product, str(buyable_volume) + "x", best_ask)
                 orders.append(Order(product, best_ask, buyable_volume))
@@ -112,10 +112,10 @@ class Trader:
         if acceptable_price is not None and best_bid > acceptable_price:
             if best_bid_volume is not None:
                 sellable_volume = max(-best_bid_volume, -
-                                  self.pos_limit[product] - self.pos[product])
+                                      self.pos_limit[product] - self.pos[product])
             else:
                 sellable_volume = -self.pos_limit[product] - self.pos[product]
-            
+
             if sellable_volume < 0:
                 print("SELL", product, str(sellable_volume) + "x", best_bid)
                 orders.append(Order(product, best_bid, sellable_volume))
