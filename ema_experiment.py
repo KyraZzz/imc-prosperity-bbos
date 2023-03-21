@@ -9,7 +9,7 @@ class Trader:
     def __init__(self):
         self.pos_lim = {'PEARLS': 20, 'BANANAS': 20}
         self.position = {'PEARLS': 0, 'BANANAS': 0}
-        self.ema = {"PEARLS": 0, "BANANAS":5000}
+        self.ema = {"PEARLS": 0, "BANANAS":0}
     #average price from market as pearl is stable
     def fairprice(self, state, product, duration): #this should be called recursively later, duration is how many data points we want to take average over
         alpha = 2/(1+duration)
@@ -18,9 +18,13 @@ class Trader:
         best_bid = max(order_depth.buy_orders.keys()) if len(order_depth.buy_orders) != 0 else None
         if best_ask and best_bid:
             mid_price = (best_ask + best_bid)/2
-        if mid_price:
-            self.ema[product] = self.ema[product] * alpha + (1 - alpha) * mid_price
-            return self.ema[product]
+        if self.ema[product] == 0:
+            self.ema[product] = mid_price
+        else:
+            if mid_price:
+                self.ema[product] = self.ema[product] * alpha + (1 - alpha) * mid_price
+
+        return self.ema[product]
 
     
     def updatestatus(self, state):
@@ -46,30 +50,40 @@ class Trader:
                 orders = []
                 banana_order = state.order_depths[item]
                 #find the average of pearl based on market order
-                acceptable_price = self.fairprice(state, 'BANANAS',7)
+                acceptable_price = self.fairprice(state, 'BANANAS', 3)
+                best_ask_price = min(banana_order.sell_orders.keys())
+                best_bid_price = max(banana_order.buy_orders.keys())
+                current_price = (best_ask_price + best_bid_price)/2
                 #we are buying first                        
-                if len(banana_order.sell_orders) > 0: #ask price is the price other market participants want to sell and we are buying in 
-                    best_ask_price = min(banana_order.sell_orders.keys())
-                    ask_volume = banana_order.sell_orders[best_ask_price]
-                    if  acceptable_price and best_ask_price < acceptable_price:
-                        if self.position['BANANAS'] < 20 -(-ask_volume):
-                            print('BUY BANANAS'+',' + str(-ask_volume)+',' + str(best_ask_price))
-                            orders.append(Order('BANANAS', best_ask_price, -ask_volume))
+                if len(banana_order.sell_orders) != 0: #ask price is the price other market participants want to sell and we are buying in 
+                    best_ask_volume = banana_order.sell_orders[best_ask_price] if best_ask_price is not None else None
+                    print(best_ask_price)
+                    print(acceptable_price)
+                    if acceptable_price is not None and current_price > acceptable_price: 
+                        if best_ask_volume is not None:
+                            buyable_volume = min(2, self.pos_lim['BANANAS'] - self.position['BANANAS'])
                         else:
-                            print('BUY BANANAS'+',' + str(20 - self.position['BANANAS'])+',' + str(best_ask_price))
-                            orders.append(Order('BANANAS', best_ask_price, 20 - self.position['BANANAS']))
+                            buyable_volume = self.pos_lim['BANANAS'] - self.position['BANANAS']
+                        if buyable_volume > 0:
+                            print("BUY", 'BANANAS', str(buyable_volume) + "x", best_ask_price)
+                            orders.append(Order('BANANAS', best_ask_price, buyable_volume))
  
                        
-                if len(banana_order.buy_orders) > 0:
-                    best_bid_price = min(banana_order.buy_orders.keys())
-                    bid_volume = banana_order.buy_orders[best_bid_price] #bid/ask is about other market participants
-                    if best_bid_price > acceptable_price: #other people want to buy and we are selling
-                        if self.position['BANANAS'] > bid_volume:
-                            print('SELL BANANAS'+',' +str(bid_volume)+',' + str(best_bid_price)) #we are effectively concatenant a string here, so we must convert integer to string first
-                            orders.append(Order('BANANAS', best_bid_price, bid_volume))
-                        else:
-                            print('SELL BANANAS'+',' +str(self.position['BANANAS'])+',' + str(best_bid_price)) #we are effectively concatenant a string here, so we must convert integer to string first
-                            orders.append(Order('BANANAS', best_bid_price, self.position['BANANAS']))
+                if len(banana_order.buy_orders) != 0:
 
+                    best_bid_volume = banana_order.buy_orders[best_bid_price] if best_bid_price is not None else None
+                    print(best_bid_price)
+                    print(acceptable_price)
+                    if acceptable_price is not None and current_price < acceptable_price: #other people want to buy and we are selling
+                        if best_bid_volume is not None:
+                            sellable_volume = max(-2, -self.pos_lim['BANANAS'] - self.position['BANANAS'])
+                        else:
+                            sellable_volume = -self.pos_lim['BANANAS'] - self.position['BANANAS']
+            
+                        if sellable_volume < 0:
+                            print("SELL", 'BANANAS', str(sellable_volume) + "x", best_bid_price)
+                            orders.append(Order('BANANAS', best_bid_price, sellable_volume))
+                      
                 results['BANANAS'] = orders
+
         return results
