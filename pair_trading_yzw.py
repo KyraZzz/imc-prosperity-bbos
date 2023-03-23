@@ -18,9 +18,9 @@ class Trader:
         self.banana_acceptable_price = 0
         self.benchmark = 0
         self.stdev = 0
-        self.condition1 = 0
-        self.condition2 = 0
-        #self.condition3 = 0
+        #self.condition1 = 0
+        #self.condition2 = 0
+        self.condition3 = 0
 
     def get_order_book_info(self, order_depth):
         best_ask = min(order_depth.sell_orders.keys()) if len(
@@ -168,26 +168,24 @@ class Trader:
                 self.diffsma1.append(difference)
                 print('price difference: ' +str(difference))
                 self.diffsma2 = []
+                if len(self.diffsma1) != 0:
+                    if len(self.diffsma1) < 10:
+                        self.benchmark = 0
+                        self.stdev = 0
+                    else:
+                        self.benchmark = np.array(self.diffsma1[-10:]).mean()
+                        self.stdev = np.std(self.diffsma1[-10:])
             if difference < 0:
                 self.diffsma2.append(difference)
                 print('price difference: ' +str(difference))
                 self.diffsma1 = []
-
-            if len(self.diffsma1) != 0:
-                if len(self.diffsma1) < 10:
-                    self.benchmark = 0
-                    self.stdev = 0
-                else:
-                    self.benchmark = np.array(self.diffsma1[-10:]).mean()
-                    self.stdev = np.std(self.diffsma1[-10:])
-
-            if len(self.diffsma2) != 0:
-                if len(self.diffsma2) < 10:
-                    self.benchmark = 0
-                    self.stdev = 0
-                else:
-                    self.benchmark = np.array(self.diffsma2[-10:]).mean()
-                    self.stdev = np.std(self.diffsma2[-10:])
+                if len(self.diffsma2) != 0:
+                    if len(self.diffsma2) < 10:
+                        self.benchmark = 0
+                        self.stdev = 0
+                    else:
+                        self.benchmark = np.array(self.diffsma2[-10:]).mean()
+                        self.stdev = np.std(self.diffsma2[-10:])
 
             if abs(difference) < 3:  #another exit position
                 product = "COCONUTS"
