@@ -3,6 +3,8 @@ from typing import Dict, List
 from datamodel import OrderDepth, TradingState, Order
 import numpy as np
 
+THRESHOLD = 2e-4
+
 
 class Trader:
     def __init__(self):
@@ -53,6 +55,7 @@ class Trader:
             self.pos[product] += pos_delta
             self.last_timestamp[product] = trades[0].timestamp
 
+        """
         product = "PEARLS"
         orders: list[Order] = []
         order_depth: OrderDepth = state.order_depths[product]
@@ -145,7 +148,7 @@ class Trader:
 
         # Add all the above orders to the result dict
         result[product] = orders
-
+        """
         # Pair trading between COCONUTS and PINA_COLADAS
         orders_coconut: list[Order] = []
         orders_pina = []
@@ -155,74 +158,77 @@ class Trader:
         order_depth_pina = state.order_depths["PINA_COLADAS"]
         best_ask_pina, best_ask_volume_pina, best_bid_pina, best_bid_volume_pina, avg_pina = self.get_order_book_info(
             order_depth_pina)
+        hedge_ratio = 1.875
 
         # compute normed price difference
         if avg_coconut is not None and avg_pina is not None:
-            difference = avg_coconut - avg_pina - (15000 - 8000)
+            difference = 15000 - 8000
             # entry signal
-            if difference > 0:
-                # COCONUT overpriced, PINA underpriced
-                bid_product = "PINA_COLADAS"
-                ask_product = "COCONUTS"
-                bid_volume = min(-best_ask_volume_pina,
-                                 self.pos_limit[bid_product] - self.pos[bid_product])
-                ask_volume = -min(best_bid_volume_coconut,
-                                  self.pos_limit[ask_product] + self.pos[ask_product])
-                # TODO: TREAT VOLUME SEPARATELY?
-                if bid_volume > 0:
-                    print("BUY", bid_product, str(
-                        bid_volume) + "x", best_ask_pina)
-                    orders_pina.append(
-                        Order(bid_product, best_ask_pina, bid_volume))
-                if sellable_volume < 0:
-                    print("SELL", ask_product, str(
-                        ask_volume) + "x", best_bid_coconut)
-                    orders_coconut.append(
-                        Order(ask_product, best_bid_coconut, ask_volume))
-            elif difference < 0:
-                # PINA overpriced, COCONUT underpriced
+            if best_bid_pina - best_ask_coconut - difference >= THRESHOLD * (best_ask_coconut - 8000) and best_ask_coconut != 0:
+                # hit bid in PINA, take offer in COCONUT
                 bid_product = "COCONUTS"
                 ask_product = "PINA_COLADAS"
                 bid_volume = min(-best_ask_volume_coconut,
                                  self.pos_limit[bid_product] - self.pos[bid_product])
-                ask_volume = -min(best_bid_volume_pina,
-                                  self.pos_limit[ask_product] + self.pos[ask_product])
-                # TODO: TREAT VOLUME SEPARATELY?
-                if bid_volume > 0:
+                ask_volume = min(best_bid_volume_pina,
+                                 self.pos_limit[ask_product] + self.pos[ask_product])
+                volume = min(bid_volume / hedge_ratio, ask_volume)
+                if volume > 0:
                     print("BUY", bid_product, str(
-                        bid_volume) + "x", best_ask_coconut)
+                        hedge_ratio * volume) + "x", best_ask_coconut)
                     orders_coconut.append(
-                        Order(bid_product, best_ask_coconut, bid_volume))
-                if sellable_volume < 0:
+                        Order(bid_product, best_ask_coconut, hedge_ratio * volume))
                     print("SELL", ask_product, str(
-                        ask_volume) + "x", best_bid_pina)
+                        -volume) + "x", best_bid_pina)
                     orders_pina.append(
-                        Order(ask_product, best_bid_pina, ask_volume))
-            # exit signal
-            elif difference == 0:
-                product = "COCONUTS"
-                volume = self.pos["COCONUTS"]
-                if volume > 0:
-                    # sell all existing positions
-                    print("SELL", product, str(-volume) + "x", best_ask_coconut)
-                    orders_coconut.append(
-                        Order(product, best_ask_coconut, -volume))
-                elif volume < 0:
-                    # buy all existing positions
-                    print("BUY", product, str(-volume) + "x", best_bid_coconut)
-                    orders_coconut.append(
-                        Order(product, best_bid_coconut, -volume))
+                        Order(ask_product, best_bid_pina, -volume))
 
-                product = "PINA_COLADAS"
-                volume = self.pos["PINA_COLADAS"]
+            elif best_bid_coconut - best_ask_pina - difference >= THRESHOLD * (best_ask_pina - 15000) and best_ask_pina != 0:
+                # hit bid in COCONUT, take offer in PINA
+                bid_product = "PINA_COLADAS"
+                ask_product = "COCONUTS"
+                bid_volume = min(-best_ask_volume_pina,
+                                 self.pos_limit[bid_product] - self.pos[bid_product])
+                ask_volume = min(best_bid_volume_coconut,
+                                 self.pos_limit[ask_product] + self.pos[ask_product])
+                volume = min(bid_volume, ask_volume / hedge_ratio)
                 if volume > 0:
-                    # sell all existing positions
-                    print("SELL", product, str(-volume) + "x", best_ask_pina)
-                    orders_pina.append(Order(product, best_ask_pina, -volume))
-                elif volume < 0:
-                    # buy all existing positions
-                    print("BUY", product, str(-volume) + "x", best_bid_pina)
-                    orders_pina.append(Order(product, best_bid_pina, -volume))
+                    print("BUY", bid_product, str(
+                        volume) + "x", best_ask_pina)
+                    orders_pina.append(
+                        Order(bid_product, best_ask_pina, volume))
+                    print("SELL", ask_product, str(
+                        -hedge_ratio * volume) + "x", best_bid_coconut)
+                    orders_coconut.append(
+                        Order(ask_product, best_bid_coconut, -hedge_ratio * volume))
+
+            volume_coconut = abs(self.pos["COCONUTS"])
+            volume_pina = abs(self.pos["PINA_COLADAS"])
+            # when we have long COCONUT and we need to sell it
+            if volume_coconut > 0 and best_bid_coconut - 8000 > best_ask_pina - 15000:
+                bid_product = "PINA_COLADAS"
+                ask_product = "COCONUTS"
+                print("SELL", ask_product, str(
+                    -volume_coconut) + "x", best_bid_coconut)
+                orders_coconut.append(
+                    Order(ask_product, best_bid_coconut, -volume_coconut))
+                print("BUY", bid_product, str(
+                    -volume_pina) + "x", best_ask_pina)
+                orders_pina.append(
+                    Order(bid_product, best_ask_pina, -volume_pina))
+
+            # when we have short COCONUT and we need to buy it
+            elif volume_coconut < 0 and best_bid_pina - 15000 > best_ask_coconut - 8000:
+                bid_product = "COCONUTS"
+                ask_product = "PINA_COLADAS"
+                print("BUY", bid_product, str(
+                    -volume_coconut) + "x", best_ask_coconut)
+                orders_coconut.append(
+                    Order(bid_product, best_ask_coconut, -volume_coconut))
+                print("SELL", ask_product, str(
+                    -volume_pina) + "x", best_bid_pina)
+                orders_pina.append(
+                    Order(ask_product, best_bid_pina, -volume_pina))
 
             # Add all the above orders to the result dict
             result["COCONUTS"] = orders_coconut
