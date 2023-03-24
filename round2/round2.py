@@ -1,8 +1,26 @@
 import collections
 from typing import Dict, List
-from datamodel import OrderDepth, TradingState, Order
+from datamodel import OrderDepth, TradingState, Order, ProsperityEncoder, Symbol
 import numpy as np
+import json
+from typing import Any
 
+class Logger:
+    def __init__(self) -> None:
+        self.logs = ""
+
+    def print(self, *objects: Any, sep: str = " ", end: str = "\n") -> None:
+        self.logs += sep.join(map(str, objects)) + end
+        
+    def flush(self, state: TradingState, orders: dict[Symbol, list[Order]]) -> None:
+        print(json.dumps({
+            "state": state,
+            "orders": orders,
+            "logs": self.logs,
+        }, cls=ProsperityEncoder, separators=(",", ":"), sort_keys=True))
+        self.logs = ""
+
+logger = Logger()
 
 class Trader:
     def __init__(self):
@@ -10,7 +28,7 @@ class Trader:
                           "COCONUTS": 600, "PINA_COLADAS": 300}
         self.pos = {"PEARLS": 0, "BANANAS": 0,
                     "COCONUTS": 0, "PINA_COLADAS": 0}
-        self.sma = {"PEARLS": [], "BANANAS": []}
+        self.sma = {"PEARLS": [], "BANANAS": [], "COCONUTS": [], "PINA_COLADAS": []}
         self.last_timestamp = {"PEARLS": 0,
                                "BANANAS": 0, "COCONUTS": 0, "PINA_COLADAS": 0}
         self.diffs = []
@@ -274,4 +292,5 @@ class Trader:
         
         result["PINA_COLADAS"] = self.trade_pinas(state)
 
+        logger.flush(state, result)
         return result
