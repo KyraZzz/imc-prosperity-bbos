@@ -174,7 +174,7 @@ class Trader:
                         bid_volume) + "x", best_ask_pina)
                     orders_pina.append(
                         Order(bid_product, best_ask_pina, bid_volume))
-                if sellable_volume < 0:
+                if ask_volume < 0:
                     print("SELL", ask_product, str(
                         ask_volume) + "x", best_bid_coconut)
                     orders_coconut.append(
@@ -193,7 +193,7 @@ class Trader:
                         bid_volume) + "x", best_ask_coconut)
                     orders_coconut.append(
                         Order(bid_product, best_ask_coconut, bid_volume))
-                if sellable_volume < 0:
+                if ask_volume < 0:
                     print("SELL", ask_product, str(
                         ask_volume) + "x", best_bid_pina)
                     orders_pina.append(
@@ -204,14 +204,14 @@ class Trader:
                 volume = self.pos["COCONUTS"]
                 if volume > 0:
                     # sell all existing positions
-                    print("SELL", product, str(-volume) + "x", best_ask_coconut)
-                    orders_coconut.append(
-                        Order(product, best_ask_coconut, -volume))
-                elif volume < 0:
-                    # buy all existing positions
-                    print("BUY", product, str(-volume) + "x", best_bid_coconut)
+                    print("SELL", product, str(-volume) + "x", best_bid_coconut)
                     orders_coconut.append(
                         Order(product, best_bid_coconut, -volume))
+                elif volume < 0:
+                    # buy all existing positions
+                    print("BUY", product, str(-volume) + "x", best_ask_coconut)
+                    orders_coconut.append(
+                        Order(product, best_ask_coconut, -volume))
 
                 product = "PINA_COLADAS"
                 volume = self.pos["PINA_COLADAS"]
