@@ -233,42 +233,40 @@ class Trader:
             order_depth)
         if avg is not None:
             self.sma["BERRIES"].append(avg)
-            if len(self.sma["BERRIES"]) >= 14:
-                week_price = np.array(self.sma["BERRIES"])[-7:].mean()
-                quarter_price = np.array(self.sma["BERRIES"])[-14:].mean()
-            if self.last_timestamp["BERRIES"] < 500:
-                # yet to mature
-                if week_price > quarter_price:
-                    # upwards trend, yet to mature
-                    # hit the bid
-                    if best_ask_volume is not None:
-                        buyable_volume = min(-best_ask_volume,
-                                             self.pos_limit["BERRIES"] - self.pos["BERRIES"])
-                    else:
-                        buyable_volume = self.pos_limit["BERRIES"] - \
-                            self.pos["BERRIES"]
+            if len(self.sma["BERRIES"]) > 7:
+                acceptable_price = np.array(
+                    self.sma["BERRIES"])[-7:].mean()
+            else:
+                acceptable_price = 3900
 
-                    if buyable_volume > 0:
-                        print("BUY", "BERRIES", str(
-                            buyable_volume) + "x", best_ask)
-                        orders.append(
-                            Order("BERRIES", best_ask, buyable_volume))
+        if best_ask < acceptable_price:
+            if best_ask_volume is not None:
+                buyable_volume = min(-best_ask_volume,
+                                     self.pos_limit["BERRIES"] - self.pos["BERRIES"])
+            else:
+                buyable_volume = self.pos_limit["BERRIES"] - \
+                    self.pos["BERRIES"]
 
-            elif self.last_timestamp["BERRIES"] == 500 or (self.last_timestamp["BERRIES"] > 500 and week_price < quarter_price):
-                # exit, sell all positions
-                if best_bid_volume is not None:
-                    sellable_volume = max(-best_bid_volume, -
-                                          self.pos_limit["BERRIES"] - self.pos["BERRIES"])
-                else:
-                    sellable_volume = - \
-                        self.pos_limit["BERRIES"] - self.pos["BERRIES"]
-                    print("SELL", "BERRIES", str(
-                        sellable_volume) + "x", best_bid)
-                    orders.append(Order("BERRIES", best_bid, sellable_volume))
+            if buyable_volume > 0:
+                print("BUY", "BERRIES", str(buyable_volume) + "x", best_ask)
+                orders.append(Order("BERRIES", best_ask, buyable_volume))
+
+        if best_bid > acceptable_price:
+            if best_bid_volume is not None:
+                sellable_volume = max(-best_bid_volume, -
+                                      self.pos_limit["BERRIES"] - self.pos["BERRIES"])
+            else:
+                sellable_volume = - \
+                    self.pos_limit["BERRIES"] - self.pos["BERRIES"]
+
+            if sellable_volume < 0:
+                print("SELL", "BERRIES", str(sellable_volume) + "x", best_bid)
+                orders.append(Order("BERRIES", best_bid, sellable_volume))
 
         return orders
 
     def trade_diving_gears(self, state):
+
         pass
 
     def run(self, state: TradingState) -> Dict[str, List[Order]]:
