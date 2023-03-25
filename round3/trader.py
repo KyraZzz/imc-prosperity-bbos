@@ -135,17 +135,24 @@ class Trader:
             order_depth_pina)
         hedge_ratio = 8/15
         THRESHOLD = 2e-3
+        fair_price_pina = 15000 - 3000
+        fair_price_coconuts = 8000 - 3000
+        MAX_SLOT = 10
+        print(
+            f"best_ask_coconut: {best_ask_coconut} * {best_ask_volume_coconut}, best_bid_coconut: {best_bid_coconut} * {best_bid_volume_coconut}, avg_coconut: {avg_coconut} ")
+        print(
+            f"best_ask_pina: {best_ask_pina} * {best_ask_volume_pina}, best_bid_pina: {best_bid_pina} * {best_bid_volume_pina}, avg_pina: {avg_pina}")
 
         # compute normed price difference
         if avg_coconut is not None and avg_pina is not None:
             # entry signal
-            if (best_bid_pina - 15000) - (best_ask_coconut - 8000) >= THRESHOLD * (best_ask_coconut - 8000) and best_ask_coconut != 0:
+            if (best_bid_pina - fair_price_pina) - (best_ask_coconut - fair_price_coconuts) >= THRESHOLD * (best_ask_coconut - fair_price_coconuts) and best_ask_coconut != 0:
                 # sell/hit bid in PINA, buy/take offer in COCONUT
                 bid_product = "COCONUTS"
                 ask_product = "PINA_COLADAS"
-                bid_volume = min(-best_ask_volume_coconut,
+                bid_volume = min(MAX_SLOT, -best_ask_volume_coconut,
                                  self.pos_limit[bid_product] - self.pos[bid_product])
-                ask_volume = min(best_bid_volume_pina,
+                ask_volume = min(MAX_SLOT, best_bid_volume_pina,
                                  self.pos_limit[ask_product] + self.pos[ask_product])
                 volume = min(bid_volume, ask_volume)
                 if volume > 0:
@@ -158,15 +165,15 @@ class Trader:
                     orders_pina.append(
                         Order(ask_product, best_bid_pina, -volume))
 
-            elif (best_bid_coconut - 8000) - (best_ask_pina - 15000) >= THRESHOLD * (best_ask_pina - 15000) and best_ask_pina != 0:
+            elif (best_bid_coconut - fair_price_coconuts) - (best_ask_pina - fair_price_pina) >= THRESHOLD * (best_ask_pina - fair_price_pina) and best_ask_pina != 0:
                 # hit bid in COCONUT, take offer in PINA
                 bid_product = "PINA_COLADAS"
                 ask_product = "COCONUTS"
-                bid_volume = min(-best_ask_volume_pina,
+                bid_volume = min(MAX_SLOT, -best_ask_volume_pina,
                                  self.pos_limit[bid_product] - self.pos[bid_product])
-                ask_volume = min(best_bid_volume_coconut,
+                ask_volume = min(MAX_SLOT, best_bid_volume_coconut,
                                  self.pos_limit[ask_product] + self.pos[ask_product])
-                volume = min(bid_volume, ask_volume)
+                volume = min(int(bid_volume / hedge_ratio), ask_volume)
                 if volume > 0:
                     print("BUY", bid_product, str(
                         int(hedge_ratio * volume)) + "x", best_ask_pina)
@@ -178,7 +185,7 @@ class Trader:
                         Order(ask_product, best_bid_coconut, -volume))
 
             # when we have long COCONUT and we need to sell it
-            if self.pos["COCONUTS"] > 0 and best_bid_coconut - 8000 > best_ask_pina - 15000:
+            if self.pos["COCONUTS"] > 0 and best_bid_coconut - fair_price_coconuts > best_ask_pina - fair_price_pina:
                 bid_product = "PINA_COLADAS"
                 ask_product = "COCONUTS"
                 bid_volume = min(-best_ask_volume_pina,
@@ -197,7 +204,7 @@ class Trader:
                         Order(bid_product, best_ask_pina, int(volume / hedge_ratio)))
 
             # when we have short COCONUT and we need to buy it
-            elif self.pos["COCONUTS"] < 0 and best_bid_pina - 15000 > best_ask_coconut - 8000:
+            elif self.pos["COCONUTS"] < 0 and best_bid_pina - fair_price_pina > best_ask_coconut - fair_price_coconuts:
                 bid_product = "COCONUTS"
                 ask_product = "PINA_COLADAS"
                 bid_volume = min(-best_ask_volume_coconut,
@@ -273,8 +280,8 @@ class Trader:
                 continue
             pos_delta = 0
             for trade in trades:
-                # print(trade.buyer, trade.seller, trade.price,
-                #       trade.quantity, trade.symbol)
+                print(
+                    f"buyer: {trade.buyer}, seller: {trade.seller}, price: {trade.price}, quantity: {trade.quantity}, symbol: {trade.symbol}")
                 if trade.buyer == "SUBMISSION":
                     # We bought product
                     pos_delta += trade.quantity
