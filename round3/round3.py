@@ -292,18 +292,6 @@ class Trader:
 
         return orders
 
-        if best_bid > acceptable_price:
-            if best_bid_volume is not None:
-                sellable_volume = max(-best_bid_volume, -
-                                      self.pos_limit["BERRIES"] - self.pos["BERRIES"])
-            else:
-                sellable_volume = - \
-                    self.pos_limit["BERRIES"] - self.pos["BERRIES"]
-            if sellable_volume < 0:
-                print("SELL", "BERRIES", str(sellable_volume) + "x", best_bid)
-                orders.append(Order("BERRIES", best_bid, sellable_volume))
-        return orders
-
     def trade_diving_gear(self, state):
         self.dolphin_sightings.append(state.observations['DOLPHIN_SIGHTINGS'])
         print("DOLPHIN_SIGHTINGS:", state.observations['DOLPHIN_SIGHTINGS'])
