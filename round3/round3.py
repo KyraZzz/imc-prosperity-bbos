@@ -10,7 +10,7 @@ class Logger:
     def __init__(self) -> None:
         self.logs = ""
 
-    def print(self, *objects: Any, sep: str = " ", end: str = "\n") -> None:
+    def print(self, *objects: Any, sep: str = " ", end: str = "\n") -> None: #The * symbol indicates that an arbitrary number of # arguments can be passed to `args
         self.logs += sep.join(map(str, objects)) + end
 
     def flush(self, state: TradingState, orders: dict[Symbol, list[Order]]) -> None:
@@ -20,6 +20,7 @@ class Logger:
             "logs": self.logs,
         }, cls=ProsperityEncoder, separators=(",", ":"), sort_keys=True))
         self.logs = ""
+    #Typically this means that the data will be copied from the program buffer to the operating system buffer.
 
 
 logger = Logger()
@@ -258,9 +259,9 @@ class Trader:
             order_depth)
         if avg is not None:
             self.sma["BERRIES"].append(avg)
-            if len(self.sma["BERRIES"]) > 7:
+            if len(self.sma["BERRIES"]) > 12:
                 acceptable_price = np.array(
-                    self.sma["BERRIES"])[-7:].mean()
+                    self.sma["BERRIES"])[-12:].mean()
 
                 if best_ask < acceptable_price:
                     if best_ask_volume is not None:
